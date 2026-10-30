@@ -13,8 +13,9 @@ unnecessary. When a session starts, it does three things:
 
 - It copies each skill in `.agents/skills/<name>/` into `.claude/skills/<name>/`.
   It does the same from `~/.agents/skills/` into `~/.claude/skills/`.
-- It asks Claude Code to reload its skills, so the copied ones work in that
-  same session.
+- It asks Claude Code to reload its skills, so the copied ones can work in
+  that same session. The first time a project gets a `.claude/skills/` folder,
+  a note asks you to run `/reload-skills` once (or start a new session).
 - It puts a `.gitignore` in each copy, so the copies stay out of your commits.
 
 A copy is refreshed when its original changes, and an unchanged copy is left
@@ -22,7 +23,12 @@ alone. If you already have a skill of your own with the same name, the mod
 never writes over it: it keeps yours and shows a note. Nothing leaves your
 machine.
 
-PREVIEW-LINE
+![In a new Claude Code session, the skill list starts with house-style, copied from .agents/skills; asked for a commit title, Claude loads the house-style skill and answers "[docs] fix typo in readme"](https://raw.githubusercontent.com/nightlab-agent/agents-skills/50ccc95849c29b4181c3c558e559ff7da3921cd3/docs/preview.png)
+
+Seen in a real Claude Code terminal on 2026-10-30: a project with only
+`.agents/skills/house-style/`, in the session after the copy. The reload in
+the same session was not seen there (that test machine's managed settings
+skip the hook that asks for it), so it is described as the tests see it.
 
 ## Install
 
