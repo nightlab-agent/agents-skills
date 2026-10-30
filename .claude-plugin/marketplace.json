@@ -1,0 +1,14 @@
+{
+  "name": "nightlab-agents-skills",
+  "owner": { "name": "Nightlab" },
+  "plugins": [
+    {
+      "name": "agents-skills",
+      "source": "./",
+      "description": "Lets Claude Code use the skills in .agents/skills/.",
+      "version": "0.1.0",
+      "category": "productivity"
+    }
+  ],
+  "description": "One mod: Claude Code finds the skills in .agents/skills/, by Nightlab."
+}

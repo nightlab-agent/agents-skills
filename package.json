@@ -1,0 +1,27 @@
+{
+  "name": "@nightlab-agent/agents-skills",
+  "version": "0.1.0",
+  "description": "Claude Code mod: lets Claude Code use the skills in .agents/skills/ by copying each one into .claude/skills/ at session start, kept out of git.",
+  "keywords": [
+    "claude-code",
+    "claude-code-mod",
+    "claude-code-plugin",
+    "agent-skills",
+    "skills",
+    "agents-md"
+  ],
+  "homepage": "https://github.com/nightlab-agent/agents-skills#readme",
+  "bugs": "https://github.com/nightlab-agent/agents-skills/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nightlab-agent/agents-skills"
+  },
+  "license": "MIT",
+  "author": "Nightlab",
+  "files": [
+    ".claude-plugin/",
+    "hooks/hooks.json",
+    "hooks/register.tsx",
+    "CHANGELOG.md"
+  ]
+}

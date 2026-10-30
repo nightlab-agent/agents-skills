@@ -64,32 +64,61 @@ export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> =>
   return done
 }
 
+type Run = { copied: number; present: number; skipped: string[]; fresh: boolean }
+
+/** Copies project and home .agents/skills; `fresh` when this created a .claude/skills folder. */
+const run = async ($: any): Promise<Run> => {
+  const cwd = (await $.session.cwd()).replace(/[\\/]+$/, '')
+  const home = ((await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? '').replace(/[\\/]+$/, '')
+  const pairs: [string, string][] = [[`${cwd}/.agents/skills`, `${cwd}/.claude/skills`]]
+  if (home && home !== cwd) pairs.push([`${home}/.agents/skills`, `${home}/.claude/skills`])
+  const fs: Fs = {
+    read: path => $.fs.read(path),
+    write: (path, text) => $.fs.write(path, text),
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    stat: path => $.fs.stat(path),
+  }
+  const out: Run = { copied: 0, present: 0, skipped: [], fresh: false }
+  for (const [from, to] of pairs) {
+    const had = await fs.exists(to)
+    const s = await sync(fs, from, to)
+    out.copied += s.copied.length
+    out.present += s.copied.length + s.kept.length
+    out.skipped.push(...s.skipped)
+    if (!had && s.copied.length) out.fresh = true
+  }
+  if (out.skipped.length) $.ui.toast(`agents-skills: kept your own .claude/skills/${out.skipped.join(', ')}; the .agents copy is not used`)
+  return out
+}
+
+const fail = ($: any, err: unknown) => {
+  try {
+    $.ui.toast(`agents-skills: could not copy .agents/skills (${err instanceof Error ? err.message : String(err)})`)
+  } catch {
+    // no toast surface; the session goes on
+  }
+}
+
 export const register: Register = on => {
+  // session.start copies first, since another mod may pass classic.SessionStart by. Claude Code
+  // does not watch a .claude/skills folder made after the session began, so say how to load it.
+  on('session.start', async ($, e, next) => {
+    try {
+      const r = await run($)
+      if (r.fresh) $.ui.toast(`agents-skills: copied ${r.copied} skill(s) into a new .claude/skills folder; run /reload-skills once to load them`)
+    } catch (err) {
+      fail($, err)
+    }
+    return next(e)
+  })
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
     try {
-      const cwd = (await $.session.cwd()).replace(/[\\/]+$/, '')
-      const home = ((await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? '').replace(/[\\/]+$/, '')
-      const pairs: [string, string][] = [[`${cwd}/.agents/skills`, `${cwd}/.claude/skills`]]
-      if (home && home !== cwd) pairs.push([`${home}/.agents/skills`, `${home}/.claude/skills`])
-      const fs: Fs = {
-        read: path => $.fs.read(path),
-        write: (path, text) => $.fs.write(path, text),
-        list: path => $.fs.list(path),
-        exists: path => $.fs.exists(path),
-        stat: path => $.fs.stat(path),
-      }
-      let copied = 0
-      const skipped: string[] = []
-      for (const [from, to] of pairs) {
-        const s = await sync(fs, from, to)
-        copied += s.copied.length
-        skipped.push(...s.skipped)
-      }
-      if (skipped.length) $.ui.toast(`agents-skills: kept your own .claude/skills/${skipped.join(', ')}; the .agents copy is not used`)
-      if (copied) return { ...result, reloadSkills: true }
-    } catch {
-      // A failure of this mod never stops the session.
+      const r = await run($)
+      if (r.present) return { ...result, reloadSkills: true }
+    } catch (err) {
+      fail($, err)
     }
     return result
   })
