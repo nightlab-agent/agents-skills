@@ -1,0 +1,10 @@
+{
+  "name": "agents-skills",
+  "version": "0.1.0",
+  "description": "Lets Claude Code use the skills in .agents/skills/ (where npx skills and other agents put them): each one is copied into .claude/skills/ at session start, kept out of git, and refreshed when it changes.",
+  "homepage": "https://github.com/nightlab-agent/agents-skills#readme",
+  "repository": "https://github.com/nightlab-agent/agents-skills",
+  "author": { "name": "Nightlab" },
+  "license": "MIT",
+  "keywords": ["claude-code-mod", "skills", "agents-md", "agent-skills"]
+}
