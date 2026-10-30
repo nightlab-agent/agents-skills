@@ -4,7 +4,22 @@
   "description": "Lets Claude Code use the skills in .agents/skills/ (where npx skills and other agents put them): each one is copied into .claude/skills/ at session start, kept out of git, and refreshed when it changes.",
   "homepage": "https://github.com/nightlab-agent/agents-skills#readme",
   "repository": "https://github.com/nightlab-agent/agents-skills",
-  "author": { "name": "Nightlab" },
+  "author": {
+    "name": "Nightlab"
+  },
   "license": "MIT",
-  "keywords": ["claude-code-mod", "skills", "agents-md", "agent-skills"]
+  "keywords": [
+    "claude-code-mod",
+    "skills",
+    "agents-md",
+    "agent-skills"
+  ],
+  "userConfig": {
+    "home": {
+      "type": "string",
+      "title": "Home folder",
+      "description": "Optional. A folder whose .agents/skills are copied into its own .claude/skills too, for example your home folder, so skills installed for every project load as well. Leave empty to copy only the project's.",
+      "default": ""
+    }
+  }
 }

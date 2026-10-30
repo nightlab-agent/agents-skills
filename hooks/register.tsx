@@ -37,6 +37,7 @@ export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> =>
   const done: Synced = { copied: [], kept: [], skipped: [] }
   if (!(await fs.exists(from))) return done
   for (const e of await fs.list(from)) {
+    if (e.name === '.' || e.name === '..' || /[\\/]/.test(e.name)) continue
     const src = `${from}/${e.name}`
     if (!(await isDir(fs, src, e.kind)) || !(await fs.exists(`${src}/SKILL.md`))) continue
     const dst = `${to}/${e.name}`
@@ -66,15 +67,26 @@ export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> =>
 
 type Run = { copied: number; present: number; skipped: string[]; fresh: boolean }
 
-/** Copies project and home .agents/skills; `fresh` when this created a .claude/skills folder. */
-const run = async ($: any): Promise<Run> => {
-  const cwd = (await $.session.cwd()).replace(/[\\/]+$/, '')
-  const home = ((await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? '').replace(/[\\/]+$/, '')
-  const pairs: [string, string][] = [[`${cwd}/.agents/skills`, `${cwd}/.claude/skills`]]
-  if (home && home !== cwd) pairs.push([`${home}/.agents/skills`, `${home}/.claude/skills`])
+/** The `home` option as a folder path without a trailing slash, or '' when unset. */
+export const homeOf = (value: unknown): string =>
+  (typeof value === 'string' ? value.trim() : '').replace(/[\\/]+$/, '')
+
+/**
+ * Copies the project's .agents/skills, and the home folder's when the `home` option names one;
+ * `fresh` when this created a .claude/skills folder.
+ */
+const run = async ($: any, home: string): Promise<Run> => {
+  const root = (await $.session.root()).replace(/[\\/]+$/, '')
+  const pairs: [string, string][] = [[`${root}/.agents/skills`, `${root}/.claude/skills`]]
+  if (home && home !== root) pairs.push([`${home}/.agents/skills`, `${home}/.claude/skills`])
   const fs: Fs = {
     read: path => $.fs.read(path),
-    write: (path, text) => $.fs.write(path, text),
+    // Writes only ever land inside one of the .claude/skills folders above.
+    write: async (path, text) => {
+      const dir = pairs.map(([, to]) => to).find(to => path.startsWith(`${to}/`))
+      if (dir === undefined || path.slice(dir.length + 1).split('/').includes('..')) throw new Error(`refused to write outside .claude/skills: ${path}`)
+      await $.fs.write(`${dir}/${path.slice(dir.length + 1)}`, text)
+    },
     list: path => $.fs.list(path),
     exists: path => $.fs.exists(path),
     stat: path => $.fs.stat(path),
@@ -100,12 +112,13 @@ const fail = ($: any, err: unknown) => {
   }
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  const home = homeOf((options as { home?: unknown } | undefined)?.home)
   // session.start copies first, since another mod may pass classic.SessionStart by. Claude Code
   // does not watch a .claude/skills folder made after the session began, so say how to load it.
   on('session.start', async ($, e, next) => {
     try {
-      const r = await run($)
+      const r = await run($, home)
       if (r.fresh) $.ui.toast(`agents-skills: copied ${r.copied} skill(s) into a new .claude/skills folder; run /reload-skills once to load them`)
     } catch (err) {
       fail($, err)
@@ -115,7 +128,7 @@ export const register: Register = on => {
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
     try {
-      const r = await run($)
+      const r = await run($, home)
       if (r.present) return { ...result, reloadSkills: true }
     } catch (err) {
       fail($, err)

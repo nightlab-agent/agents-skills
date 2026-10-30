@@ -11,8 +11,9 @@ skills under `.agents/` (code.claude.com/docs/en/memory lists "anything under a
 hand. This mod (a plugin that adds to what Claude Code does) makes the links
 unnecessary. When a session starts, it does three things:
 
-- It copies each skill in `.agents/skills/<name>/` into `.claude/skills/<name>/`.
-  It does the same from `~/.agents/skills/` into `~/.claude/skills/`.
+- It copies each skill in the project's `.agents/skills/<name>/` into
+  `.claude/skills/<name>/`. If you set the `home` option (below), it does the
+  same from `<home>/.agents/skills/` into `<home>/.claude/skills/`.
 - It asks Claude Code to reload its skills, so the copied ones can work in
   that same session. The first time a project gets a `.claude/skills/` folder,
   a note asks you to run `/reload-skills` once (or start a new session).
@@ -46,6 +47,24 @@ claude plugin install agents-skills --marketplace nightlab-agent/agents-skills
 
 Then start a new session in a project that has `.agents/skills/`.
 
+To copy the skills in your home folder's `.agents/skills/` as well, set the
+`home` option to that folder (for example `/home/you`) when the install asks,
+or later in `/plugin`. Left empty, only the project's skills are copied.
+
+## What it writes
+
+Only inside a `.claude/skills/` folder: the project's, and
+`<home>/.claude/skills/` when the `home` option is set. Each copied skill gets
+its files, a `.gitignore` holding `*`, and a `.from-agents-skills` file that
+marks it as a copy. A write anywhere else is refused.
+
+## What each hook does
+
+- `session.start`: copies the skills when the session starts, and shows the
+  `/reload-skills` note the first time a `.claude/skills/` folder is made.
+- `classic.SessionStart`: copies again (in case another plugin let the first
+  hook pass by) and asks Claude Code to reload skills when a copy is present.
+
 ## What it does not do
 
 - It copies the files; it makes no links. Edit a skill where it lives, in
@@ -54,8 +73,9 @@ Then start a new session in a project that has `.agents/skills/`.
 - It cannot delete files. If you remove a skill from `.agents/skills/`,
   delete its copy in `.claude/skills/` yourself. You can recognise the mod's
   copies by the `.from-agents-skills` file inside them.
-- It looks at the folder the session starts in and at your home folder. It
-  does not look at parent folders or at `.agents/agents` or `.agents/hooks`.
+- It looks at the project the session starts in, and at the `home` folder
+  only when you set that option. It does not look at parent folders or at
+  `.agents/agents` or `.agents/hooks`.
 - It copies text files. A binary file inside a skill (an image, for example)
   may not copy correctly.
 - A skill added to `.agents/skills/` during a session is picked up at the next
