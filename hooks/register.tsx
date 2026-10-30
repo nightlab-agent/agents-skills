@@ -10,21 +10,35 @@ export type Fs = {
   write: (path: string, text: string) => Promise<void>
   list: (path: string) => Promise<{ name: string; kind: 'file' | 'dir' | 'other' }[]>
   exists: (path: string) => Promise<boolean>
-  stat: (path: string) => Promise<{ kind: 'file' | 'dir' | 'other' }>
+  stat: (path: string, resolve?: boolean) => Promise<{ kind: 'file' | 'dir' | 'other'; realPath?: string }>
 }
 
 export type Synced = { copied: string[]; kept: string[]; skipped: string[] }
 
-const isDir = async (fs: Fs, path: string, kind: string): Promise<boolean> =>
-  kind === 'dir' || (kind === 'other' && (await fs.stat(path)).kind === 'dir')
+/** What an entry leads to: a symbolic link (`other`) is followed. */
+const kindOf = async (fs: Fs, path: string, kind: string): Promise<string> =>
+  kind === 'other' ? (await fs.stat(path)).kind : kind
+
+const isDir = async (fs: Fs, path: string, kind: string): Promise<boolean> => (await kindOf(fs, path, kind)) === 'dir'
+
+/** True when `a` and `b` land on the same folder (a link made by hand from one to the other). */
+const sameFolder = async (fs: Fs, a: string, b: string): Promise<boolean> => {
+  try {
+    const [x, y] = await Promise.all([fs.stat(a, true), fs.stat(b, true)])
+    return x.realPath !== undefined && x.realPath === y.realPath
+  } catch {
+    return false
+  }
+}
 
 /** Every file under `dir`, as paths relative to it. */
 const filesOf = async (fs: Fs, dir: string, prefix = ''): Promise<string[]> => {
   const out: string[] = []
   for (const e of await fs.list(dir)) {
     const rel = `${prefix}${e.name}`
-    if (await isDir(fs, `${dir}/${e.name}`, e.kind)) out.push(...(await filesOf(fs, `${dir}/${e.name}`, `${rel}/`)))
-    else if (e.kind === 'file') out.push(rel)
+    const kind = await kindOf(fs, `${dir}/${e.name}`, e.kind)
+    if (kind === 'dir') out.push(...(await filesOf(fs, `${dir}/${e.name}`, `${rel}/`)))
+    else if (kind === 'file') out.push(rel)
   }
   return out.sort()
 }
@@ -33,7 +47,17 @@ const filesOf = async (fs: Fs, dir: string, prefix = ''): Promise<string[]> => {
  * Copies each skill in `from` (a folder holding SKILL.md) to `to/<name>`, unless `to/<name>`
  * exists without MARK (the user's own skill: skipped). A copy whose files already match is kept.
  */
-export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> => {
+export const sync = (fs: Fs, from: string, to: string): Promise<Synced> => {
+  // Two runs on one folder (the two hooks of a session) go one after the other, so the second
+  // never sees a copy half made.
+  const run = (queue.get(to) ?? Promise.resolve()).then(() => syncNow(fs, from, to))
+  queue.set(to, run.catch(() => undefined))
+  return run
+}
+
+const queue = new Map<string, Promise<unknown>>()
+
+const syncNow = async (fs: Fs, from: string, to: string): Promise<Synced> => {
   const done: Synced = { copied: [], kept: [], skipped: [] }
   if (!(await fs.exists(from))) return done
   for (const e of await fs.list(from)) {
@@ -42,6 +66,11 @@ export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> =>
     if (!(await isDir(fs, src, e.kind)) || !(await fs.exists(`${src}/SKILL.md`))) continue
     const dst = `${to}/${e.name}`
     if ((await fs.exists(dst)) && !(await fs.exists(`${dst}/${MARK}`))) {
+      // a link from .claude/skills/<name> to this very skill already does the job
+      if (await sameFolder(fs, dst, src)) {
+        done.kept.push(e.name)
+        continue
+      }
       done.skipped.push(e.name)
       continue
     }
@@ -57,9 +86,11 @@ export const sync = async (fs: Fs, from: string, to: string): Promise<Synced> =>
       done.kept.push(e.name)
       continue
     }
-    for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
+    // The .gitignore and the mark go first: a copy cut short stays out of git and is still
+    // known as this mod's, so the next session finishes it.
     await fs.write(`${dst}/.gitignore`, '*\n')
     await fs.write(`${dst}/${MARK}`, `Copied from ${src} by the agents-skills mod; edit the original there.\n`)
+    for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
     done.copied.push(e.name)
   }
   return done
@@ -89,7 +120,7 @@ const run = async ($: any, home: string): Promise<Run> => {
     },
     list: path => $.fs.list(path),
     exists: path => $.fs.exists(path),
-    stat: path => $.fs.stat(path),
+    stat: (path, resolve) => (resolve ? $.fs.stat(path, { resolve: true }) : $.fs.stat(path)),
   }
   const out: Run = { copied: 0, present: 0, skipped: [], fresh: false }
   for (const [from, to] of pairs) {
@@ -100,13 +131,13 @@ const run = async ($: any, home: string): Promise<Run> => {
     out.skipped.push(...s.skipped)
     if (!had && s.copied.length) out.fresh = true
   }
-  if (out.skipped.length) $.ui.toast(`agents-skills: kept your own .claude/skills/${out.skipped.join(', ')}; the .agents copy is not used`)
+  if (out.skipped.length) $.ui.toast(`kept your own .claude/skills/${out.skipped.join(', ')}; the .agents copy is not used`)
   return out
 }
 
 const fail = ($: any, err: unknown) => {
   try {
-    $.ui.toast(`agents-skills: could not copy .agents/skills (${err instanceof Error ? err.message : String(err)})`)
+    $.ui.toast(`could not copy .agents/skills (${err instanceof Error ? err.message : String(err)})`)
   } catch {
     // no toast surface; the session goes on
   }
@@ -119,7 +150,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     try {
       const r = await run($, home)
-      if (r.fresh) $.ui.toast(`agents-skills: copied ${r.copied} skill(s) into a new .claude/skills folder; run /reload-skills once to load them`)
+      if (r.fresh) $.ui.toast(`copied ${r.copied} skill(s) to a new .claude/skills; run /reload-skills to load them`)
     } catch (err) {
       fail($, err)
     }

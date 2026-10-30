@@ -82,3 +82,22 @@ test('comparison: no .agents/skills, classic SessionStart asks for no reload', a
   const r = (await $.classic.SessionStart({ source: 'startup' } as never)) as { reloadSkills?: boolean } | undefined
   expect(r?.reloadSkills).toBe(undefined)
 })
+
+// The engine puts the plugin's name before a toast, and a 120-column terminal cuts a long one.
+test('the first-copy note does not repeat the plugin name and fits one line', async ($, on) => {
+  const w = world(on, { [`${ROOT}/.agents/skills/house-style/SKILL.md`]: SKILL })
+  await $.session.start({ cwd: ROOT, surface: null } as never)
+  const note = w.toasts.find(t => t.includes('/reload-skills'))
+  expect(note).toBeDefined()
+  expect(note!.startsWith('agents-skills:')).toBe(false)
+  expect(note!.length <= 100).toBe(true)
+})
+
+test('comparison: no new .claude/skills folder, no first-copy note', async ($, on) => {
+  const w = world(on, {
+    [`${ROOT}/.agents/skills/house-style/SKILL.md`]: SKILL,
+    [`${ROOT}/.claude/skills/other/SKILL.md`]: SKILL,
+  })
+  await $.session.start({ cwd: ROOT, surface: null } as never)
+  expect(w.toasts.some(t => t.includes('/reload-skills'))).toBe(false)
+})

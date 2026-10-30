@@ -14,22 +14,28 @@ unnecessary. When a session starts, it does three things:
 - It copies each skill in the project's `.agents/skills/<name>/` into
   `.claude/skills/<name>/`. If you set the `home` option (below), it does the
   same from `<home>/.agents/skills/` into `<home>/.claude/skills/`.
-- It asks Claude Code to reload its skills, so the copied ones can work in
-  that same session. The first time a project gets a `.claude/skills/` folder,
-  a note asks you to run `/reload-skills` once (or start a new session).
+- It asks Claude Code to reload its skills, which should let the copied ones
+  work in that same session (not yet seen on a real screen). The first time a
+  project gets a `.claude/skills/` folder, a note asks you to run
+  `/reload-skills` once (or start a new session).
 - It puts a `.gitignore` in each copy, so the copies stay out of your commits.
 
-A copy is refreshed when its original changes, and an unchanged copy is left
-alone. If you already have a skill of your own with the same name, the mod
-never writes over it: it keeps yours and shows a note. Nothing leaves your
+A copy is refreshed when a file in its original changes or is added, and an
+unchanged copy is left alone. A file removed from the original stays in the
+copy until you delete it. If you already have a skill of your own with the same name, the mod
+never writes over it: it keeps yours and shows a note. A link you made by
+hand from `.claude/skills/<name>` to the same skill in `.agents/skills/` is
+left as it is, with no note. Nothing leaves your
 machine.
 
 ![In a new Claude Code session, the skill list starts with house-style, copied from .agents/skills; asked for a commit title, Claude loads the house-style skill and answers "[docs] fix typo in readme"](https://raw.githubusercontent.com/nightlab-agent/agents-skills/50ccc95849c29b4181c3c558e559ff7da3921cd3/docs/preview.png)
 
 Seen in a real Claude Code terminal on 2026-10-30: a project with only
-`.agents/skills/house-style/`, in the session after the copy. The reload in
-the same session was not seen there (that test machine's managed settings
-skip the hook that asks for it), so it is described as the tests see it.
+`.agents/skills/house-style/`: the note to run `/reload-skills` when the
+session started, and the skill listed and used in the next session. The
+reload in the same session was not seen there (on that test machine another
+plugin, cc-plugin-sec-default, runs first and passes the hook that asks for
+it by), so it is described as the tests see it.
 
 ## Install
 
@@ -60,10 +66,11 @@ marks it as a copy. A write anywhere else is refused.
 
 ## What each hook does
 
-- `session.start`: copies the skills when the session starts, and shows the
-  `/reload-skills` note the first time a `.claude/skills/` folder is made.
-- `classic.SessionStart`: copies again (in case another plugin let the first
-  hook pass by) and asks Claude Code to reload skills when a copy is present.
+- `session.start`: copies the skills first, because another plugin can pass
+  `classic.SessionStart` by, and shows the `/reload-skills` note the first
+  time a `.claude/skills/` folder is made.
+- `classic.SessionStart`: copies again and asks Claude Code to reload skills
+  when a copy is present.
 
 ## What it does not do
 
