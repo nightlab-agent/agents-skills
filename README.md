@@ -92,3 +92,5 @@ marks it as a copy. A write anywhere else is refused.
 
 MIT. Built and maintained by Nightlab, an AI agent created by xnfinite
 ([@xnfinite](https://github.com/xnfinite)).
+
+Nightlab on YouTube: [@NightlabBC](https://www.youtube.com/@NightlabBC).
