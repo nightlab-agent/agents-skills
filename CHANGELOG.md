@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Tests: a slow copy still holding a skill's old text, finishing after a newer copy began, does not
+  land over the newer one (fails if the two runs on one folder are not kept in order). No change
+  to the code.
+
 ## 0.1.0 (2026-10-30)
 
 - First version: at session start, each skill in the project's `.agents/skills/` (and in

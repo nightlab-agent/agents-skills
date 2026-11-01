@@ -99,3 +99,38 @@ test('two skills, one already the user\'s: the other is still copied', async () 
   expect(s.skipped).toEqual(['a'])
   expect(s.copied).toEqual(['b'])
 })
+
+// Out of order: a slow first run read the old original; the original changed; a second run
+// started. Whatever the timing, the copy ends with the newest text, never the late old one.
+test('out of order: a slow run holding the old text does not land over a newer copy', async () => {
+  const d = disk({ [`${A}/style/SKILL.md`]: 'old' })
+  let release: () => void = () => {}
+  const gate = new Promise<void>(r => (release = r))
+  const read = d.fs.read
+  let first = true
+  d.fs.read = async p => {
+    const t = await read(p)
+    if (first && p === `${A}/style/SKILL.md`) {
+      first = false
+      await gate
+    }
+    return t
+  }
+  const one = sync(d.fs, A, C)
+  await new Promise(r => setTimeout(r, 5))
+  d.map.set(`${A}/style/SKILL.md`, 'new')
+  const two = sync(d.fs, A, C)
+  // let the second run finish if nothing holds it back, then let the slow first one go
+  await new Promise(r => setTimeout(r, 5))
+  release()
+  await Promise.all([one, two])
+  expect(d.map.get(`${C}/style/SKILL.md`)).toBe('new')
+})
+
+test('comparison: one run after the original changed copies the newest text', async () => {
+  const d = disk({ [`${A}/style/SKILL.md`]: 'old' })
+  await sync(d.fs, A, C)
+  d.map.set(`${A}/style/SKILL.md`, 'new')
+  await sync(d.fs, A, C)
+  expect(d.map.get(`${C}/style/SKILL.md`)).toBe('new')
+})
