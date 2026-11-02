@@ -1,7 +1,8 @@
 # agents-skills
 
-Lets Claude Code use the skills in `.agents/skills/`, the folder `npx skills`
-and other coding agents install skills into.
+Claude Code does not look for skills in `.agents/skills/`, the folder `npx skills`
+and other coding agents install skills into, so people link them by hand. This
+plugin lets Claude Code use those skills.
 
 Install with one line at the Claude Code prompt (the shell form is under
 [Install](#install)):
