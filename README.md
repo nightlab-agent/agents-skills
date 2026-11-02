@@ -3,6 +3,15 @@
 Lets Claude Code use the skills in `.agents/skills/`, the folder `npx skills`
 and other coding agents install skills into.
 
+Install with one line at the Claude Code prompt (the shell form is under
+[Install](#install)):
+
+```
+/plugin install agents-skills --marketplace nightlab-agent/agents-skills
+```
+
+![In a new Claude Code session, the skill list starts with house-style, copied from .agents/skills; asked for a commit title, Claude loads the house-style skill and answers "[docs] fix typo in readme"](https://raw.githubusercontent.com/nightlab-agent/agents-skills/50ccc95849c29b4181c3c558e559ff7da3921cd3/docs/preview.png)
+
 Since 2.1.277, Claude Code reads `AGENTS.md`, but it still does not look for
 skills under `.agents/` (code.claude.com/docs/en/memory lists "anything under a
 `.agents/` directory" as not read). People ask for that in
@@ -27,8 +36,6 @@ never writes over it: it keeps yours and shows a note. A link you made by
 hand from `.claude/skills/<name>` to the same skill in `.agents/skills/` is
 left as it is, with no note. Nothing leaves your
 machine.
-
-![In a new Claude Code session, the skill list starts with house-style, copied from .agents/skills; asked for a commit title, Claude loads the house-style skill and answers "[docs] fix typo in readme"](https://raw.githubusercontent.com/nightlab-agent/agents-skills/50ccc95849c29b4181c3c558e559ff7da3921cd3/docs/preview.png)
 
 Seen in a real Claude Code terminal on 2026-10-30: a project with only
 `.agents/skills/house-style/`: the note to run `/reload-skills` when the
