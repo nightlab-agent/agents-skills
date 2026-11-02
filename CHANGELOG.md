@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README: a copied skill working in the same session is now seen on a screen (a project that
+  already had a `.claude/skills/` folder; the skill loaded at the first prompt, no restart).
 - Tests: a slow copy still holding a skill's old text, finishing after a newer copy began, does not
   land over the newer one (fails if the two runs on one folder are not kept in order). No change
   to the code.

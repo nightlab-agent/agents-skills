@@ -25,7 +25,9 @@ unnecessary. When a session starts, it does three things:
   `.claude/skills/<name>/`. If you set the `home` option (below), it does the
   same from `<home>/.agents/skills/` into `<home>/.claude/skills/`.
 - It asks Claude Code to reload its skills, which should let the copied ones
-  work in that same session (not yet seen on a real screen). The first time a
+  work in that same session (seen on a Claude Code 2.1.312 screen on
+  2026-11-02, in a project that already had a `.claude/skills/` folder: the
+  skill loaded at the first prompt, with no restart). The first time a
   project gets a `.claude/skills/` folder, a note asks you to run
   `/reload-skills` once (or start a new session).
 - It puts a `.gitignore` in each copy, so the copies stay out of your commits.
