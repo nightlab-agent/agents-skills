@@ -116,6 +116,7 @@ const run = async ($: any, home: string): Promise<Run> => {
     write: async (path, text) => {
       const dir = pairs.map(([, to]) => to).find(to => path.startsWith(`${to}/`))
       if (dir === undefined || path.slice(dir.length + 1).split('/').includes('..')) throw new Error(`refused to write outside .claude/skills: ${path}`)
+      // user file: a copy of the user's own skill, where Claude Code reads skills.
       await $.fs.write(`${dir}/${path.slice(dir.length + 1)}`, text)
     },
     list: path => $.fs.list(path),
