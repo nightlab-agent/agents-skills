@@ -17,7 +17,7 @@ skills under `.agents/` (code.claude.com/docs/en/memory lists "anything under a
 `.agents/` directory" as not read). People ask for that in
 [anthropics/claude-code#31005](https://github.com/anthropics/claude-code/issues/31005)
 (open, 584 reactions on 2026-10-29), and in the meantime they make symlinks by
-hand. This mod (a plugin that adds to what Claude Code does) makes the links
+hand. This plugin (it adds to what Claude Code does) makes the links
 unnecessary. When a session starts, it does three things:
 
 - It copies each skill in the project's `.agents/skills/<name>/` into
@@ -31,7 +31,7 @@ unnecessary. When a session starts, it does three things:
 
 A copy is refreshed when a file in its original changes or is added, and an
 unchanged copy is left alone. A file removed from the original stays in the
-copy until you delete it. If you already have a skill of your own with the same name, the mod
+copy until you delete it. If you already have a skill of your own with the same name, the plugin
 never writes over it: it keeps yours and shows a note. A link you made by
 hand from `.claude/skills/<name>` to the same skill in `.agents/skills/` is
 left as it is, with no note. Nothing leaves your
@@ -85,7 +85,7 @@ marks it as a copy. A write anywhere else is refused.
   `.agents/skills/`, because edits to the copy are replaced at the next
   session start.
 - It cannot delete files. If you remove a skill from `.agents/skills/`,
-  delete its copy in `.claude/skills/` yourself. You can recognise the mod's
+  delete its copy in `.claude/skills/` yourself. You can recognise the plugin's
   copies by the `.from-agents-skills` file inside them.
 - It looks at the project the session starts in, and at the `home` folder
   only when you set that option. It does not look at parent folders or at
