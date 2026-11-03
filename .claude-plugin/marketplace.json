@@ -6,7 +6,7 @@
       "name": "agents-skills",
       "source": "./",
       "description": "Lets Claude Code use the skills in .agents/skills/.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "productivity"
     }
   ],

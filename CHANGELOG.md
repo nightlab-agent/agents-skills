@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-11-03
 
 - README: the opening is rewritten; the install line and the picture are on the first screen.
 - README, npm description and marketplace entry say plugin, not mod. The README links the
