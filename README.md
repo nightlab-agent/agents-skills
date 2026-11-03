@@ -24,12 +24,10 @@ unnecessary. When a session starts, it does three things:
 - It copies each skill in the project's `.agents/skills/<name>/` into
   `.claude/skills/<name>/`. If you set the `home` option (below), it does the
   same from `<home>/.agents/skills/` into `<home>/.claude/skills/`.
-- It asks Claude Code to reload its skills, which should let the copied ones
-  work in that same session (seen on a Claude Code 2.1.312 screen on
-  2026-11-02, in a project that already had a `.claude/skills/` folder: the
-  skill loaded at the first prompt, with no restart). The first time a
-  project gets a `.claude/skills/` folder, a note asks you to run
-  `/reload-skills` once (or start a new session).
+- It asks Claude Code to reload its skills, so the copied ones can work in
+  that same session. The first time a project gets a `.claude/skills/`
+  folder, a note asks you to run `/reload-skills` once (or start a new
+  session).
 - It puts a `.gitignore` in each copy, so the copies stay out of your commits.
 
 A copy is refreshed when a file in its original changes or is added, and an
@@ -42,10 +40,12 @@ machine.
 
 Seen in a real Claude Code terminal on 2026-10-30: a project with only
 `.agents/skills/house-style/`: the note to run `/reload-skills` when the
-session started, and the skill listed and used in the next session. The
-reload in the same session was not seen there (on that test machine another
-plugin, cc-plugin-sec-default, runs first and passes the hook that asks for
-it by), so it is described as the tests see it.
+session started, and the skill listed and used in the next session.
+Seen on a Claude Code 2.1.312 screen on 2026-11-02, in a project that already
+had a `.claude/skills/` folder: the copied skill loaded at the first prompt,
+with no restart. The reload request itself has not been seen on a screen (on
+both test machines another plugin, cc-plugin-sec-default, ran first and passed
+the hook that sends it by), so that part is described as the tests see it.
 
 ## Install
 

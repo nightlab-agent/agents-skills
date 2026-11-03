@@ -2,11 +2,15 @@
 
 ## Unreleased
 
-- README: a copied skill working in the same session is now seen on a screen (a project that
-  already had a `.claude/skills/` folder; the skill loaded at the first prompt, no restart).
+- README: the opening is rewritten; the install line and the picture are on the first screen.
+- README, npm description and marketplace entry say plugin, not mod. The README links the
+  Nightlab YouTube channel.
+- README: a copied skill loading in the same session is now seen on a screen (a project that
+  already had a `.claude/skills/` folder; the skill loaded at the first prompt, no restart). The
+  reload request itself is still not seen on a screen.
 - Tests: a slow copy still holding a skill's old text, finishing after a newer copy began, does not
   land over the newer one (fails if the two runs on one folder are not kept in order). No change
-  to the code.
+  to what the code does.
 
 ## 0.1.0 (2026-10-30)
 
