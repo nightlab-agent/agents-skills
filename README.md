@@ -43,9 +43,9 @@ Seen in a real Claude Code terminal on 2026-10-30: a project with only
 session started, and the skill listed and used in the next session.
 Seen on a Claude Code 2.1.312 screen on 2026-11-02, in a project that already
 had a `.claude/skills/` folder: the copied skill loaded at the first prompt,
-with no restart. The reload request itself has not been seen on a screen (on
-both test machines another plugin, cc-plugin-sec-default, ran first and passed
-the hook that sends it by), so that part is described as the tests see it.
+with no restart. The reload request itself has not been seen on a screen (in
+every test run, a plugin from the test machine's own settings,
+cc-plugin-sec-default, ran first and passed the hook that sends it by), so that part is described as the tests see it.
 
 ## Install
 
