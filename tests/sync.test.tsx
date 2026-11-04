@@ -60,9 +60,9 @@ test('comparison: a copy it made earlier is refreshed when the original changed'
 })
 
 test('an unchanged copy is kept: no write, so no skill reload', async () => {
-  const d = disk({ [`${A}/style/SKILL.md`]: 'S', [`${C}/style/SKILL.md`]: 'S', [`${C}/style/${MARK}`]: 'm' })
+  const d = disk({ [`${A}/style/SKILL.md`]: 'S', [`${C}/style/SKILL.md`]: 'S', [`${C}/style/${MARK}`]: 'm', [`${C}/style/.gitignore`]: '*\n' })
   const s = await sync(d.fs, A, C)
-  expect(s).toEqual({ copied: [], kept: ['style'], skipped: [] })
+  expect(s).toEqual({ copied: [], kept: ['style'], skipped: [], failed: [] })
   expect(d.writes).toEqual([])
 })
 
@@ -89,7 +89,7 @@ test('a skill folder that is a symbolic link is followed', async () => {
 
 test('no .agents/skills folder: nothing happens', async () => {
   const d = disk({ '/w/README.md': 'x' })
-  expect(await sync(d.fs, A, C)).toEqual({ copied: [], kept: [], skipped: [] })
+  expect(await sync(d.fs, A, C)).toEqual({ copied: [], kept: [], skipped: [], failed: [] })
   expect(d.writes).toEqual([])
 })
 

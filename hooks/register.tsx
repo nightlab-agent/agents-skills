@@ -4,6 +4,11 @@ import type { Register } from 'claude-code'
 // never written over.
 export const MARK = '.from-agents-skills'
 
+// The .gitignore every copy carries. It and the mark are this mod's own: a source skill's file of
+// either name is left out of the copy, or it would undo what they promise.
+const IGNORE = '*\n'
+const RESERVED = new Set(['.gitignore', MARK.toLowerCase()])
+
 // Minimal surface of $.fs this mod uses, so the sync can be tested on a plain map.
 export type Fs = {
   read: (path: string) => Promise<string>
@@ -13,7 +18,7 @@ export type Fs = {
   stat: (path: string, resolve?: boolean) => Promise<{ kind: 'file' | 'dir' | 'other'; realPath?: string }>
 }
 
-export type Synced = { copied: string[]; kept: string[]; skipped: string[] }
+export type Synced = { copied: string[]; kept: string[]; skipped: string[]; failed: string[] }
 
 /** What an entry leads to: a symbolic link (`other`) is followed. */
 const kindOf = async (fs: Fs, path: string, kind: string): Promise<string> =>
@@ -31,13 +36,34 @@ const sameFolder = async (fs: Fs, a: string, b: string): Promise<boolean> => {
   }
 }
 
-/** Every file under `dir`, as paths relative to it. */
-const filesOf = async (fs: Fs, dir: string, prefix = ''): Promise<string[]> => {
+/** Empty, or only the first file this mod writes: a copy cut short, with nothing of the user's in it. */
+const isUnfinished = async (fs: Fs, dst: string): Promise<boolean> => {
+  const entries = await fs.list(dst).catch(() => undefined)
+  if (entries === undefined) return false
+  if (entries.length === 0) return true
+  return entries.length === 1 && entries[0]!.name === '.gitignore' && (await fs.read(`${dst}/.gitignore`)) === IGNORE
+}
+
+/** Where `path` lands, itself or through its folder when it is not there yet; undefined when a link leads nowhere. */
+const placed = async (fs: Fs, path: string): Promise<string | undefined> => {
+  const own = await fs.stat(path, true).catch(() => undefined)
+  if (own) return own.realPath?.replace(/[\\/]+$/, '')
+  const cut = path.lastIndexOf('/')
+  if (cut <= 0) return undefined
+  const folder = await placed(fs, path.slice(0, cut))
+  return folder === undefined ? undefined : `${folder}/${path.slice(cut + 1)}`
+}
+
+/** Every file under `dir`, as paths relative to it. A link back to a folder above it is not walked. */
+const filesOf = async (fs: Fs, dir: string, prefix = '', above: string[] = []): Promise<string[]> => {
+  const real = (await fs.stat(dir, true)).realPath
+  if (real !== undefined && above.includes(real)) return []
+  const inside = real === undefined ? above : [...above, real]
   const out: string[] = []
   for (const e of await fs.list(dir)) {
     const rel = `${prefix}${e.name}`
     const kind = await kindOf(fs, `${dir}/${e.name}`, e.kind)
-    if (kind === 'dir') out.push(...(await filesOf(fs, `${dir}/${e.name}`, `${rel}/`)))
+    if (kind === 'dir') out.push(...(await filesOf(fs, `${dir}/${e.name}`, `${rel}/`, inside)))
     else if (kind === 'file') out.push(rel)
   }
   return out.sort()
@@ -58,45 +84,57 @@ export const sync = (fs: Fs, from: string, to: string): Promise<Synced> => {
 const queue = new Map<string, Promise<unknown>>()
 
 const syncNow = async (fs: Fs, from: string, to: string): Promise<Synced> => {
-  const done: Synced = { copied: [], kept: [], skipped: [] }
+  const done: Synced = { copied: [], kept: [], skipped: [], failed: [] }
   if (!(await fs.exists(from))) return done
   for (const e of await fs.list(from)) {
     if (e.name === '.' || e.name === '..' || /[\\/]/.test(e.name)) continue
-    const src = `${from}/${e.name}`
-    if (!(await isDir(fs, src, e.kind)) || !(await fs.exists(`${src}/SKILL.md`))) continue
-    const dst = `${to}/${e.name}`
-    if ((await fs.exists(dst)) && !(await fs.exists(`${dst}/${MARK}`))) {
-      // a link from .claude/skills/<name> to this very skill already does the job
-      if (await sameFolder(fs, dst, src)) {
-        done.kept.push(e.name)
-        continue
-      }
-      done.skipped.push(e.name)
-      continue
+    // One skill that cannot be copied does not stop the others.
+    try {
+      await syncOne(fs, e, from, to, done)
+    } catch (err) {
+      done.failed.push(`${e.name}: ${err instanceof Error ? err.message : String(err)}`)
     }
-    const files = await filesOf(fs, src)
-    let same = await fs.exists(`${dst}/${MARK}`)
-    const texts = new Map<string, string>()
-    for (const f of files) {
-      const text = await fs.read(`${src}/${f}`)
-      texts.set(f, text)
-      if (same && (!(await fs.exists(`${dst}/${f}`)) || (await fs.read(`${dst}/${f}`)) !== text)) same = false
-    }
-    if (same) {
-      done.kept.push(e.name)
-      continue
-    }
-    // The .gitignore and the mark go first: a copy cut short stays out of git and is still
-    // known as this mod's, so the next session finishes it.
-    await fs.write(`${dst}/.gitignore`, '*\n')
-    await fs.write(`${dst}/${MARK}`, `Copied from ${src} by the agents-skills mod; edit the original there.\n`)
-    for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
-    done.copied.push(e.name)
   }
   return done
 }
 
-type Run = { copied: number; present: number; skipped: string[]; fresh: boolean }
+const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, to: string, done: Synced): Promise<void> => {
+  const src = `${from}/${e.name}`
+  if (!(await isDir(fs, src, e.kind)) || !(await fs.exists(`${src}/SKILL.md`))) return
+  const dst = `${to}/${e.name}`
+  if ((await fs.exists(dst)) && !(await fs.exists(`${dst}/${MARK}`))) {
+    // a link from .claude/skills/<name> to this very skill already does the job
+    if (await sameFolder(fs, dst, src)) {
+      done.kept.push(e.name)
+      return
+    }
+    if (!(await isUnfinished(fs, dst))) {
+      done.skipped.push(e.name)
+      return
+    }
+  }
+  const files = (await filesOf(fs, src)).filter(f => !RESERVED.has(f.toLowerCase()))
+  const ignored = (await fs.exists(`${dst}/.gitignore`)) && (await fs.read(`${dst}/.gitignore`)) === IGNORE
+  let same = ignored && (await fs.exists(`${dst}/${MARK}`))
+  const texts = new Map<string, string>()
+  for (const f of files) {
+    const text = await fs.read(`${src}/${f}`)
+    texts.set(f, text)
+    if (same && (!(await fs.exists(`${dst}/${f}`)) || (await fs.read(`${dst}/${f}`)) !== text)) same = false
+  }
+  if (same) {
+    done.kept.push(e.name)
+    return
+  }
+  // The .gitignore and the mark go first: a copy cut short stays out of git and is still
+  // known as this mod's, so the next session finishes it.
+  await fs.write(`${dst}/.gitignore`, IGNORE)
+  await fs.write(`${dst}/${MARK}`, `Copied from ${src} by the agents-skills mod; edit the original there.\n`)
+  for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
+  done.copied.push(e.name)
+}
+
+type Run = { copied: number; present: number; skipped: string[]; failed: string[]; fresh: boolean }
 
 /** The `home` option as a folder path without a trailing slash, or '' when unset. */
 export const homeOf = (value: unknown): string =>
@@ -116,6 +154,9 @@ const run = async ($: any, home: string): Promise<Run> => {
     write: async (path, text) => {
       const dir = pairs.map(([, to]) => to).find(to => path.startsWith(`${to}/`))
       if (dir === undefined || path.slice(dir.length + 1).split('/').includes('..')) throw new Error(`refused to write outside .claude/skills: ${path}`)
+      // The spelling is not enough: a link in the path can lead anywhere, or nowhere.
+      const [base, land] = await Promise.all([placed(fs, dir), placed(fs, path)])
+      if (base === undefined || land === undefined || !land.startsWith(`${base}/`)) throw new Error(`refused to write through a link: ${path}`)
       // user file: a copy of the user's own skill, where Claude Code reads skills.
       await $.fs.write(`${dir}/${path.slice(dir.length + 1)}`, text)
     },
@@ -123,16 +164,18 @@ const run = async ($: any, home: string): Promise<Run> => {
     exists: path => $.fs.exists(path),
     stat: (path, resolve) => (resolve ? $.fs.stat(path, { resolve: true }) : $.fs.stat(path)),
   }
-  const out: Run = { copied: 0, present: 0, skipped: [], fresh: false }
+  const out: Run = { copied: 0, present: 0, skipped: [], failed: [], fresh: false }
   for (const [from, to] of pairs) {
     const had = await fs.exists(to)
     const s = await sync(fs, from, to)
     out.copied += s.copied.length
     out.present += s.copied.length + s.kept.length
     out.skipped.push(...s.skipped)
+    out.failed.push(...s.failed)
     if (!had && s.copied.length) out.fresh = true
   }
   if (out.skipped.length) $.ui.toast(`kept your own .claude/skills/${out.skipped.join(', ')}; the .agents copy is not used`)
+  if (out.failed.length) fail($, out.failed.join('; '))
   return out
 }
 

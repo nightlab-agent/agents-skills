@@ -17,7 +17,7 @@ const world = (on: On, files: Record<string, string>, extra: Record<string, stri
   on('session.root', () => ({ value: ROOT }))
   on('session.cwd', () => ({ value: `${ROOT}/src` }))
   on('fs.exists', (_, e) => ({ value: disk.has(e.path) || under(e.path).length > 0 }))
-  on('fs.stat', (_, e) => ({ value: { kind: disk.has(e.path) ? 'file' : 'dir', size: 1, mtimeMs: 0, isLink: false } as never }))
+  on('fs.stat', (_, e) => ({ value: { kind: disk.has(e.path) ? 'file' : 'dir', size: 1, mtimeMs: 0, isLink: false, realPath: e.path } as never }))
   on('fs.list', (_, e) => {
     const names = new Map<string, 'file' | 'dir'>()
     for (const f of under(e.path)) {

@@ -72,7 +72,8 @@ or later in `/plugin`. Left empty, only the project's skills are copied.
 Only inside a `.claude/skills/` folder: the project's, and
 `<home>/.claude/skills/` when the `home` option is set. Each copied skill gets
 its files, a `.gitignore` holding `*`, and a `.from-agents-skills` file that
-marks it as a copy. A write anywhere else is refused.
+marks it as a copy. A write anywhere else is refused, including one that a
+symbolic link would send somewhere else.
 
 ## What each hook does
 

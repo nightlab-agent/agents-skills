@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: a source skill's own `.gitignore` replaced the copy's, so the copy could be committed.
+  Files named `.gitignore` or `.from-agents-skills` at the top of a source skill now stay out of
+  the copy, and a copy that lost its `.gitignore` this way gets it back at the next session.
+- Fixed: a copy file or copy folder that is a symbolic link could take a write outside
+  `.claude/skills/` (a copy file linked to your notes was overwritten). The write is now checked
+  against where it lands, and refused when a link leads outside or nowhere.
+- Fixed: a copy cut short before its mark was written stayed skipped for good. A folder that is
+  empty, or holds only the `*` `.gitignore`, is now finished at the next session.
+- Fixed: a folder link back to a folder above it (`loop -> .`) stopped the whole copy. It is no
+  longer walked.
+- Fixed: one skill that could not be copied stopped the skills after it and lost the note to run
+  `/reload-skills`. The others are now copied, the note shows, and the failure is named in a toast.
+- Tests: the type check now covers `tests/`, as it said it did. The sample project's README says
+  what the project holds.
+
 ## 0.1.1 - 2026-11-03
 
 - README: the opening is rewritten; the install line and the picture are on the first screen.

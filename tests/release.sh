@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 claude plugin validate .
 claude plugin test .
 sh tests/typecheck.sh
+python3 -I tests/review-checks.py
 python3 -I tests/checklist.py
 python3 -I - <<'PY'
 import json, re, sys
