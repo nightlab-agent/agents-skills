@@ -36,13 +36,8 @@ const sameFolder = async (fs: Fs, a: string, b: string): Promise<boolean> => {
   }
 }
 
-/** Empty, or only the first file this mod writes: a copy cut short, with nothing of the user's in it. */
-const isUnfinished = async (fs: Fs, dst: string): Promise<boolean> => {
-  const entries = await fs.list(dst).catch(() => undefined)
-  if (entries === undefined) return false
-  if (entries.length === 0) return true
-  return entries.length === 1 && entries[0]!.name === '.gitignore' && (await fs.read(`${dst}/.gitignore`)) === IGNORE
-}
+/** A path with one kind of separator: the engine's real paths use backslashes on Windows. */
+const slashes = (path: string) => path.replace(/\\/g, '/')
 
 /** Where `path` lands, itself or through its folder when it is not there yet; undefined when a link leads nowhere. */
 const placed = async (fs: Fs, path: string): Promise<string | undefined> => {
@@ -108,13 +103,12 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
       done.kept.push(e.name)
       return
     }
-    if (!(await isUnfinished(fs, dst))) {
-      done.skipped.push(e.name)
-      return
-    }
+    done.skipped.push(e.name)
+    return
   }
   const files = (await filesOf(fs, src)).filter(f => !RESERVED.has(f.toLowerCase()))
-  const ignored = (await fs.exists(`${dst}/.gitignore`)) && (await fs.read(`${dst}/.gitignore`)) === IGNORE
+  // A .gitignore that cannot be read is written again, like one that differs.
+  const ignored = (await fs.read(`${dst}/.gitignore`).catch(() => undefined)) === IGNORE
   let same = ignored && (await fs.exists(`${dst}/${MARK}`))
   const texts = new Map<string, string>()
   for (const f of files) {
@@ -126,10 +120,10 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
     done.kept.push(e.name)
     return
   }
-  // The .gitignore and the mark go first: a copy cut short stays out of git and is still
-  // known as this mod's, so the next session finishes it.
-  await fs.write(`${dst}/.gitignore`, IGNORE)
+  // The mark goes first: a copy cut short is known as this mod's, and the next session
+  // finishes it. A folder with no mark is never ours, however empty.
   await fs.write(`${dst}/${MARK}`, `Copied from ${src} by the agents-skills mod; edit the original there.\n`)
+  await fs.write(`${dst}/.gitignore`, IGNORE)
   for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
   done.copied.push(e.name)
 }
@@ -156,7 +150,7 @@ const run = async ($: any, home: string): Promise<Run> => {
       if (dir === undefined || path.slice(dir.length + 1).split('/').includes('..')) throw new Error(`refused to write outside .claude/skills: ${path}`)
       // The spelling is not enough: a link in the path can lead anywhere, or nowhere.
       const [base, land] = await Promise.all([placed(fs, dir), placed(fs, path)])
-      if (base === undefined || land === undefined || !land.startsWith(`${base}/`)) throw new Error(`refused to write through a link: ${path}`)
+      if (base === undefined || land === undefined || !slashes(land).startsWith(`${slashes(base)}/`)) throw new Error(`refused to write through a link: ${path}`)
       // user file: a copy of the user's own skill, where Claude Code reads skills.
       await $.fs.write(`${dir}/${path.slice(dir.length + 1)}`, text)
     },

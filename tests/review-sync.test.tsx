@@ -46,10 +46,10 @@ test('review comparison: a copy that completed is refreshed at the next session'
 })
 
 // kind 5: the .gitignore must land before the first private file
-test('review: the first write into a new copy is its .gitignore', async () => {
+test('review: the first write into a new copy is its mark, then its .gitignore', async () => {
   const d = disk({ [`${A}/style/SKILL.md`]: 'S' })
   await sync(d.fs, A, C)
-  expect(d.writes[0]).toBe(`${C}/style/.gitignore`)
+  expect(d.writes.slice(0, 2)).toEqual([`${C}/style/${MARK}`, `${C}/style/.gitignore`])
 })
 test('review comparison: the copy carries a .gitignore holding *', async () => {
   const d = disk({ [`${A}/style/SKILL.md`]: 'S' })
