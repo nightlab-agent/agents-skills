@@ -14,6 +14,12 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
+def declarations():
+    # The same default as tests/typecheck.sh, so the fixture needs no CC_TYPES either.
+    types = os.environ.get('CC_TYPES') or ROOT / '.claude-plugin/types/claude-code/index.d.ts'
+    return pathlib.Path(types).resolve()
+
+
 class TypecheckReview(unittest.TestCase):
     def check_bad_file(self, folder):
         with tempfile.TemporaryDirectory(prefix='.review-check-', dir=ROOT) as tmp:
@@ -28,7 +34,7 @@ class TypecheckReview(unittest.TestCase):
                 ['sh', 'tests/typecheck.sh'], cwd=root, text=True, capture_output=True,
                 env={
                     'PATH': os.environ.get('PATH', os.defpath),
-                    'CC_TYPES': str(pathlib.Path(os.environ['CC_TYPES']).resolve()),
+                    'CC_TYPES': str(declarations()),
                     'TSC': os.environ.get('TSC', 'tsc'),
                 },
                 check=False,
