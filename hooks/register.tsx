@@ -147,8 +147,11 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
   // finishes it. A folder with no mark is never ours, however empty.
   await fs.write(`${dst}/${MARK}`, `Copied from ${src} by the agents-skills mod; edit the original there.\n`)
   await fs.write(`${dst}/.gitignore`, IGNORE)
-  for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text)
-  done.copied.push(e.name)
+  // A refused file does not stop the rest of the skill.
+  const refused: string[] = []
+  for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text).catch(err => refused.push(`${e.name}/${f}: ${err instanceof Error ? err.message : String(err)}`))
+  done.failed.push(...refused)
+  if (!refused.length) done.copied.push(e.name)
 }
 
 type Run = { copied: number; present: number; skipped: string[]; failed: string[]; fresh: boolean }

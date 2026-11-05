@@ -2,6 +2,7 @@
 // Compile hooks/register.tsx with tsc --module commonjs into a temporary folder first.
 const assert = require('node:assert/strict')
 const fs = require('node:fs/promises')
+const os = require('node:os')
 const path = require('node:path')
 const { MARK, register, sync } = require(process.argv[2])
 
@@ -16,7 +17,9 @@ const adapter = () => {
     },
     exists: async p => fs.access(p).then(() => true, () => false),
     stat: async p => {
-      const s = await fs.stat(p)
+      // The engine answers a link to nowhere as `other`, with no realPath.
+      const s = await fs.stat(p).catch(err => err.code === 'ENOENT' ? fs.lstat(p) : Promise.reject(err))
+      if (s.isSymbolicLink()) return { kind: 'other' }
       return { kind: s.isDirectory() ? 'dir' : s.isFile() ? 'file' : 'other', realPath: await fs.realpath(p) }
     },
     list: async p => (await fs.readdir(p, { withFileTypes: true })).map(e => ({
@@ -27,7 +30,7 @@ const adapter = () => {
 }
 
 const main = async () => {
-  const tmp = await fs.mkdtemp(path.join(__dirname, 'disk-'))
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'agents-skills-disk-'))
   let failures = 0
   const check = async (name, body) => {
     try { await body(); console.log(`PASS ${name}`) }

@@ -12,9 +12,13 @@ claude plugin test .
 sh tests/typecheck.sh
 # The copy against a real disk: the in-memory disk cannot show what a real one refuses.
 disk=$(mktemp -d)
-"${TSC:-tsc}" --target es2023 --lib es2023 --module commonjs --strict --skipLibCheck --outDir "$disk" "${CC_TYPES:-.claude-plugin/types/claude-code/index.d.ts}" hooks/register.tsx
+trap 'rm -rf "$disk"' EXIT
+# As typecheck.sh: tsc 6 and later refuse files on the command line beside an untracked tsconfig.json.
+extra=""
+major=$("${TSC:-tsc}" --version 2>/dev/null | sed -n 's/^Version \([0-9]*\).*/\1/p')
+if [ -f tsconfig.json ] && ! git ls-files --error-unmatch tsconfig.json >/dev/null 2>&1 && [ "${major:-0}" -ge 6 ]; then extra="--ignoreConfig"; fi
+"${TSC:-tsc}" $extra --target es2023 --lib es2023 --module commonjs --strict --skipLibCheck --outDir "$disk" "${CC_TYPES:-.claude-plugin/types/claude-code/index.d.ts}" hooks/register.tsx
 node tests/real-disk.cjs "$disk/register.js"
-rm -rf "$disk"
 python3 -I tests/review-checks.py
 python3 -I tests/checklist.py
 python3 -I - <<'PY'

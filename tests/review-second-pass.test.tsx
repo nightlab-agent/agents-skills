@@ -98,7 +98,7 @@ test('second review comparison: retry completes a copy interrupted after its mar
     if (path === `${C}/style/SKILL.md`) throw new Error('ENOSPC')
     await write(path, text)
   }
-  expect((await sync(d.fs, A, C)).failed).toEqual(['style: ENOSPC'])
+  expect((await sync(d.fs, A, C)).failed).toEqual(['style/SKILL.md: ENOSPC'])
   d.fs.write = write
   await sync(d.fs, A, C)
   expect(d.map.get(`${C}/style/SKILL.md`)).toBe('S')
