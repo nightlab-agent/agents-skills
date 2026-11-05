@@ -3,6 +3,8 @@
 ## 0.1.2 - 2026-11-05
 
 - A refused home folder no longer drops the project copy's reload.
+- Known: with the `home` option, a project skill and a home skill that each link into the other's copies still grow both copies each session.
+- Known: a source entry that turns from a file into a folder, or back, stops that skill's copy refreshing until the copy is deleted by hand.
 - Known: A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
 - Fixed: a source skill's own `.gitignore` replaced the copy's, so the copy could be committed.
   Files named `.gitignore` or `.from-agents-skills` at the top of a source skill now stay out of
