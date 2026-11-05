@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 - 2026-11-05
+
+- Fixed: with the `home` option, a project skill and a home skill that each link into the other's copies no longer grow both copies each session. Links into either copies folder are not walked.
+- Fixed: a source entry that turns from a file into a folder, or back, no longer stops the rest of that skill refreshing. The other files refresh, and a note names the entry; it stays in the copy until you remove it by hand, because the engine has no delete.
+- Known: A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
+- Tests: a real-disk check (`tests/real-disk.cjs`) runs in the release check; the in-memory disk now refuses a file and a folder at one path, as a real disk does.
+
 ## 0.1.2 - 2026-11-05
 
 - A refused home folder no longer drops the project copy's reload.

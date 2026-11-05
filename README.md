@@ -38,6 +38,11 @@ hand from `.claude/skills/<name>` to the same skill in `.agents/skills/` is
 left as it is, with no note. Nothing leaves your
 machine.
 
+Folder links into either the project or home copies are not walked. If a source
+entry changes between a file and a folder, the conflicting copy entry stays in
+place and a note names it; the skill's other files keep refreshing. Remove that
+entry from the copy to let the replacement be copied too.
+
 Seen in a real Claude Code terminal on 2026-10-30: a project with only
 `.agents/skills/house-style/`: the note to run `/reload-skills` when the
 session started, and the skill listed and used in the next session.

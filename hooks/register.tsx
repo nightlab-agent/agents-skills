@@ -50,10 +50,10 @@ const placed = async (fs: Fs, path: string): Promise<string | undefined> => {
 }
 
 /** Every file under `dir`, as paths relative to it. A link back to the walk's own path, to a folder that holds where it started, or into `copies` (where the walk's files land) is not walked. */
-const filesOf = async (fs: Fs, dir: string, copies: string | undefined, prefix = '', above: string[] = []): Promise<string[]> => {
+const filesOf = async (fs: Fs, dir: string, copies: string[], prefix = '', above: string[] = []): Promise<string[]> => {
   const real = (await fs.stat(dir, true)).realPath
   const start = above[0]
-  const into = start !== undefined && copies !== undefined && real !== undefined && `${slashes(real)}/`.startsWith(`${slashes(copies)}/`)
+  const into = start !== undefined && real !== undefined && copies.some(copy => `${slashes(real)}/`.startsWith(`${slashes(copy)}/`))
   if (into || (real !== undefined && (above.includes(real) || (start !== undefined && `${slashes(start)}/`.startsWith(`${slashes(real)}/`))))) return []
   const inside = real === undefined ? above : [...above, real]
   const out: string[] = []
@@ -69,25 +69,27 @@ const filesOf = async (fs: Fs, dir: string, copies: string | undefined, prefix =
 /**
  * Copies each skill in `from` (a folder holding SKILL.md) to `to/<name>`, unless `to/<name>`
  * exists without MARK (the user's own skill: skipped). A copy whose files already match is kept.
+ * `destinations` names all copy roots to exclude from source walks; type conflicts are reported
+ * and left in place while other files refresh.
  */
-export const sync = (fs: Fs, from: string, to: string): Promise<Synced> => {
+export const sync = (fs: Fs, from: string, to: string, destinations: string[] = [to]): Promise<Synced> => {
   // Two runs on one folder (the two hooks of a session) go one after the other, so the second
   // never sees a copy half made.
-  const run = (queue.get(to) ?? Promise.resolve()).then(() => syncNow(fs, from, to))
+  const run = (queue.get(to) ?? Promise.resolve()).then(() => syncNow(fs, from, to, destinations))
   queue.set(to, run.catch(() => undefined))
   return run
 }
 
 const queue = new Map<string, Promise<unknown>>()
 
-const syncNow = async (fs: Fs, from: string, to: string): Promise<Synced> => {
+const syncNow = async (fs: Fs, from: string, to: string, destinations: string[]): Promise<Synced> => {
   const done: Synced = { copied: [], kept: [], skipped: [], failed: [] }
   if (!(await fs.exists(from))) return done
   for (const e of await fs.list(from)) {
     if (e.name === '.' || e.name === '..' || /[\\/]/.test(e.name)) continue
     // One skill that cannot be copied does not stop the others.
     try {
-      await syncOne(fs, e, from, to, done)
+      await syncOne(fs, e, from, to, destinations, done)
     } catch (err) {
       done.failed.push(`${e.name}: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -95,7 +97,20 @@ const syncNow = async (fs: Fs, from: string, to: string): Promise<Synced> => {
   return done
 }
 
-const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, to: string, done: Synced): Promise<void> => {
+/** The engine cannot delete a type conflict. Leave it in place without freezing the other files. */
+const typeConflict = async (fs: Fs, dst: string, file: string): Promise<string | undefined> => {
+  const parts = file.split('/')
+  let path = dst
+  for (let i = 0; i < parts.length; i++) {
+    path += `/${parts[i]}`
+    if (!(await fs.exists(path))) return
+    const kind = (await fs.stat(path)).kind
+    if (i < parts.length - 1 && kind === 'file') return `ENOTDIR at ${path}`
+    if (i === parts.length - 1 && kind === 'dir') return `EISDIR at ${path}`
+  }
+}
+
+const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, to: string, destinations: string[], done: Synced): Promise<void> => {
   const src = `${from}/${e.name}`
   if (!(await isDir(fs, src, e.kind)) || !(await fs.exists(`${src}/SKILL.md`))) return
   const dst = `${to}/${e.name}`
@@ -108,12 +123,18 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
     done.skipped.push(e.name)
     return
   }
-  const files = (await filesOf(fs, src, await placed(fs, to))).filter(f => !RESERVED.has(f.toLowerCase()))
+  const copies = (await Promise.all(destinations.map(path => placed(fs, path)))).filter((path): path is string => path !== undefined)
+  const files = (await filesOf(fs, src, copies)).filter(f => !RESERVED.has(f.toLowerCase()))
   // A .gitignore that cannot be read is written again, like one that differs.
   const ignored = (await fs.read(`${dst}/.gitignore`).catch(() => undefined)) === IGNORE
   let same = ignored && (await fs.exists(`${dst}/${MARK}`))
   const texts = new Map<string, string>()
   for (const f of files) {
+    const conflict = await typeConflict(fs, dst, f)
+    if (conflict) {
+      done.failed.push(`${e.name}/${f}: ${conflict}; remove the conflicting copy entry to copy this path`)
+      continue
+    }
     const text = await fs.read(`${src}/${f}`)
     texts.set(f, text)
     if (same && (!(await fs.exists(`${dst}/${f}`)) || (await fs.read(`${dst}/${f}`)) !== text)) same = false
@@ -165,7 +186,7 @@ const run = async ($: any, home: string): Promise<Run> => {
     // One folder refused leaves the other's result standing.
     try {
       const had = await fs.exists(to)
-      const s = await sync(fs, from, to)
+      const s = await sync(fs, from, to, pairs.map(([, destination]) => destination))
       out.copied += s.copied.length
       out.present += s.copied.length + s.kept.length
       out.skipped.push(...s.skipped)

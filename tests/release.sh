@@ -10,6 +10,11 @@ cd "$(dirname "$0")/.."
 claude plugin validate .
 claude plugin test .
 sh tests/typecheck.sh
+# The copy against a real disk: the in-memory disk cannot show what a real one refuses.
+disk=$(mktemp -d)
+"${TSC:-tsc}" --target es2023 --lib es2023 --module commonjs --strict --skipLibCheck --outDir "$disk" "${CC_TYPES:-.claude-plugin/types/claude-code/index.d.ts}" hooks/register.tsx
+node tests/real-disk.cjs "$disk/register.js"
+rm -rf "$disk"
 python3 -I tests/review-checks.py
 python3 -I tests/checklist.py
 python3 -I - <<'PY'
