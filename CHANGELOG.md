@@ -4,6 +4,7 @@
 
 - Fixed: with the `home` option, a project skill and a home skill that each link into the other's copies no longer grow both copies each session. Folder links into either copies folder are not walked.
 - Fixed: a source entry that turns from a file into a folder, or back, no longer stops the rest of that skill refreshing. The other files refresh, and a note names the entry; it stays in the copy until you remove it by hand, because the engine has no delete. A copy file refused for a link that leads elsewhere no longer stops the files after it.
+- Known: while a copy's entry stays a link Claude Code refuses to write through, that skill's other files are written again each session.
 - Known: with the `home` option, a project kept under `<home>/.claude/skills/` copies only the top level of its skills, because its folders count as copies.
 - Known: A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
 - Tests: a real-disk check (`tests/real-disk.cjs`) runs in the release check; the type-change test's in-memory disk refuses a file and a folder at one path, as a real disk does.

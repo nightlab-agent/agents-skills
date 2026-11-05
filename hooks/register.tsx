@@ -151,7 +151,8 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
   const refused: string[] = []
   for (const [f, text] of texts) await fs.write(`${dst}/${f}`, text).catch(err => refused.push(`${e.name}/${f}: ${err instanceof Error ? err.message : String(err)}`))
   done.failed.push(...refused)
-  if (!refused.length) done.copied.push(e.name)
+  // What landed counts, so the session reloads it; the note names what did not.
+  if (refused.length < texts.size || !texts.size) done.copied.push(e.name)
 }
 
 type Run = { copied: number; present: number; skipped: string[]; failed: string[]; fresh: boolean }
