@@ -35,7 +35,7 @@ class TypecheckReview(unittest.TestCase):
                 env={
                     'PATH': os.environ.get('PATH', os.defpath),
                     'CC_TYPES': str(declarations()),
-                    'TSC': os.environ.get('TSC', 'tsc'),
+                    **({'TSC': os.environ['TSC']} if 'TSC' in os.environ else {}),
                 },
                 check=False,
             )
