@@ -76,7 +76,7 @@ const world = (on: On, d: ReturnType<typeof disk>, refuseHome = false) => {
 // G1 (kind 5 and 10): a cut after the first write leaves a file git shows. The first write is the
 // mark (holding the source's absolute path) and the `*` .gitignore comes second, so a session killed
 // between the two leaves `.claude/skills/<name>/.from-agents-skills` untracked (git 2.43 oracle:
-// tests/review-gate-git.py). Every file of a copy that is on disk must sit under a `*` .gitignore.
+// a real git run). Every file of a copy that is on disk must sit under a `*` .gitignore.
 const cutAfter = (d: ReturnType<typeof disk>, n: number) => {
   const write = d.fs.write
   let count = 0

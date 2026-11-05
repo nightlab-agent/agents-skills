@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- A link to a folder above a skill is not walked, so a copy cannot take in its own project and grow each session. A refused home folder no longer drops the project copy's reload.
+- A link to a folder above a skill, or into `.claude/skills` where the copies land, is not walked, so a copy cannot take in its own project and grow each session. A refused home folder no longer drops the project copy's reload.
 - A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
 - Fixed: a source skill's own `.gitignore` replaced the copy's, so the copy could be committed.
   Files named `.gitignore` or `.from-agents-skills` at the top of a source skill now stay out of

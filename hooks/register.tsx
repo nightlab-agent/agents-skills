@@ -49,17 +49,18 @@ const placed = async (fs: Fs, path: string): Promise<string | undefined> => {
   return folder === undefined ? undefined : `${folder}/${path.slice(cut + 1)}`
 }
 
-/** Every file under `dir`, as paths relative to it. A link back to the walk's own path, or to a folder that holds where it started, is not walked. */
-const filesOf = async (fs: Fs, dir: string, prefix = '', above: string[] = []): Promise<string[]> => {
+/** Every file under `dir`, as paths relative to it. A link back to the walk's own path, to a folder that holds where it started, or into `copies` (where the walk's files land) is not walked. */
+const filesOf = async (fs: Fs, dir: string, copies: string | undefined, prefix = '', above: string[] = []): Promise<string[]> => {
   const real = (await fs.stat(dir, true)).realPath
   const start = above[0]
-  if (real !== undefined && (above.includes(real) || (start !== undefined && `${slashes(start)}/`.startsWith(`${slashes(real)}/`)))) return []
+  const into = start !== undefined && copies !== undefined && real !== undefined && `${slashes(real)}/`.startsWith(`${slashes(copies)}/`)
+  if (into || (real !== undefined && (above.includes(real) || (start !== undefined && `${slashes(start)}/`.startsWith(`${slashes(real)}/`))))) return []
   const inside = real === undefined ? above : [...above, real]
   const out: string[] = []
   for (const e of await fs.list(dir)) {
     const rel = `${prefix}${e.name}`
     const kind = await kindOf(fs, `${dir}/${e.name}`, e.kind)
-    if (kind === 'dir') out.push(...(await filesOf(fs, `${dir}/${e.name}`, `${rel}/`, inside)))
+    if (kind === 'dir') out.push(...(await filesOf(fs, `${dir}/${e.name}`, copies, `${rel}/`, inside)))
     else if (kind === 'file') out.push(rel)
   }
   return out.sort()
@@ -107,7 +108,7 @@ const syncOne = async (fs: Fs, e: { name: string; kind: string }, from: string, 
     done.skipped.push(e.name)
     return
   }
-  const files = (await filesOf(fs, src)).filter(f => !RESERVED.has(f.toLowerCase()))
+  const files = (await filesOf(fs, src, await placed(fs, to))).filter(f => !RESERVED.has(f.toLowerCase()))
   // A .gitignore that cannot be read is written again, like one that differs.
   const ignored = (await fs.read(`${dst}/.gitignore`).catch(() => undefined)) === IGNORE
   let same = ignored && (await fs.exists(`${dst}/${MARK}`))
