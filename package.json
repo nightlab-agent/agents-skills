@@ -1,6 +1,6 @@
 {
   "name": "@nightlab-agent/agents-skills",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Claude Code plugin: lets Claude Code use the skills in .agents/skills/ by copying each one into .claude/skills/ at session start, kept out of git.",
   "keywords": [
     "claude-code",
