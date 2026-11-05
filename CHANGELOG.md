@@ -2,8 +2,8 @@
 
 ## 0.1.2 - 2026-11-05
 
-- A link to a folder above a skill, or into `.claude/skills` where the copies land, is not walked, so a copy cannot take in its own project and grow each session. A refused home folder no longer drops the project copy's reload.
-- A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
+- A refused home folder no longer drops the project copy's reload.
+- Known: A session killed between a copy's first two writes leaves the small mark file showing in `git status` until the next session finishes the copy.
 - Fixed: a source skill's own `.gitignore` replaced the copy's, so the copy could be committed.
   Files named `.gitignore` or `.from-agents-skills` at the top of a source skill now stay out of
   the copy, and a copy that lost its `.gitignore` this way gets it back at the next session.
@@ -12,10 +12,7 @@
   against where it lands, and refused when a link leads outside or nowhere.
 - Fixed: a copy cut short could stay skipped for good. The mark is now written first, so the next
   session finishes it; a folder with no mark stays yours, even an empty one.
-- Fixed: on Windows, where real paths carry backslashes, every refresh of a copy was refused as a
-  write through a link. A `.gitignore` that cannot be read no longer stops a copy refreshing.
-- Fixed: a folder link back to a folder above it (`loop -> .`) stopped the whole copy. It is no
-  longer walked.
+- Fixed: a link inside a skill to a folder above it, to the project root, or into `.claude/skills` (`loop -> .`, `root -> ../../..`) stopped the whole copy. Such a link is no longer walked.
 - Fixed: one skill that could not be copied stopped the skills after it and lost the note to run
   `/reload-skills`. The others are now copied, the note shows, and the failure is named in a toast.
 - Tests: the type check now covers `tests/`, as it said it did. The sample project's README says
