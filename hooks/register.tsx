@@ -49,10 +49,11 @@ const placed = async (fs: Fs, path: string): Promise<string | undefined> => {
   return folder === undefined ? undefined : `${folder}/${path.slice(cut + 1)}`
 }
 
-/** Every file under `dir`, as paths relative to it. A link back to a folder above it is not walked. */
+/** Every file under `dir`, as paths relative to it. A link back to the walk's own path, or to a folder that holds where it started, is not walked. */
 const filesOf = async (fs: Fs, dir: string, prefix = '', above: string[] = []): Promise<string[]> => {
   const real = (await fs.stat(dir, true)).realPath
-  if (real !== undefined && above.includes(real)) return []
+  const start = above[0]
+  if (real !== undefined && (above.includes(real) || (start !== undefined && `${slashes(start)}/`.startsWith(`${slashes(real)}/`)))) return []
   const inside = real === undefined ? above : [...above, real]
   const out: string[] = []
   for (const e of await fs.list(dir)) {
@@ -160,13 +161,18 @@ const run = async ($: any, home: string): Promise<Run> => {
   }
   const out: Run = { copied: 0, present: 0, skipped: [], failed: [], fresh: false }
   for (const [from, to] of pairs) {
-    const had = await fs.exists(to)
-    const s = await sync(fs, from, to)
-    out.copied += s.copied.length
-    out.present += s.copied.length + s.kept.length
-    out.skipped.push(...s.skipped)
-    out.failed.push(...s.failed)
-    if (!had && s.copied.length) out.fresh = true
+    // One folder refused leaves the other's result standing.
+    try {
+      const had = await fs.exists(to)
+      const s = await sync(fs, from, to)
+      out.copied += s.copied.length
+      out.present += s.copied.length + s.kept.length
+      out.skipped.push(...s.skipped)
+      out.failed.push(...s.failed)
+      if (!had && s.copied.length) out.fresh = true
+    } catch (err) {
+      out.failed.push(String((err as Error)?.message ?? err))
+    }
   }
   if (out.skipped.length) $.ui.toast(`kept your own .claude/skills/${out.skipped.join(', ')}; the .agents copy is not used`)
   if (out.failed.length) fail($, out.failed.join('; '))
