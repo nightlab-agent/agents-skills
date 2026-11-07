@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 - 2026-11-07
 
 - README: what the folder needs, how to set home from a shell, and that a linked skills folder is written to at its target.
 
