@@ -68,7 +68,7 @@ claude plugin install agents-skills --marketplace nightlab-agent/agents-skills
 
 Then start a new session in a project that has
 `.agents/skills/<name>/SKILL.md` for each skill you want to load. An empty
-folder, or a skill folder without `SKILL.md`, gives it nothing to copy.
+folder, or a skill folder without `SKILL.md`, gives the plugin nothing to copy.
 
 To copy the skills in your home folder's `.agents/skills/` as well, set the
 `home` option to that folder (for example `/home/you`) in

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- README: what the folder needs, how to set home from a shell, and that a linked skills folder is written to at its target.
+
 ## 0.1.3 - 2026-11-05
 
 - Fixed: with the `home` option, a project skill and a home skill that each link into the other's copies no longer grow both copies each session. Folder links into either copies folder are not walked.
