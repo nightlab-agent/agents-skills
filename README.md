@@ -66,19 +66,24 @@ The same from a shell:
 claude plugin install agents-skills --marketplace nightlab-agent/agents-skills
 ```
 
-Then start a new session in a project that has `.agents/skills/`.
+Then start a new session in a project that has
+`.agents/skills/<name>/SKILL.md` for each skill you want to load. An empty
+folder, or a skill folder without `SKILL.md`, gives it nothing to copy.
 
 To copy the skills in your home folder's `.agents/skills/` as well, set the
-`home` option to that folder (for example `/home/you`) when the install asks,
-or later in `/plugin`. Left empty, only the project's skills are copied.
+`home` option to that folder (for example `/home/you`) in
+`/plugin configure agents-skills@nightlab-agents-skills`. The shell install
+does not ask: add `--config home=/home/you` to the install command instead.
+Left empty, only the project's skills are copied.
 
 ## What it writes
 
-Only inside a `.claude/skills/` folder: the project's, and
-`<home>/.claude/skills/` when the `home` option is set. Each copied skill gets
-its files, a `.gitignore` holding `*`, and a `.from-agents-skills` file that
-marks it as a copy. A write anywhere else is refused, including one that a
-symbolic link would send somewhere else.
+Writes go under the project's `.claude/skills/`, and
+`<home>/.claude/skills/` when the `home` option is set. If either folder is
+itself a symbolic link, writes go to its resolved destination. Each copied
+skill gets its files, a `.gitignore` holding `*`, and a `.from-agents-skills` file that
+marks it as a copy. A symbolic link inside a copy cannot redirect a write
+outside that resolved skills folder.
 
 ## What each hook does
 
